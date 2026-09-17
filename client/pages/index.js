@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
       <img
-        src="/rovers-cricket-logo.png"
+        src="/rovers-logo.png"
         alt="Rovers Cricket Tournament"
         className="mb-5 h-auto w-64 max-w-full"
       />
