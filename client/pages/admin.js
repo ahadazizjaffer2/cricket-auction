@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuctionState } from "../lib/useAuctionState";
 import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
+import Image from "next/image";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
@@ -118,6 +119,7 @@ export default function Admin() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 pb-28">
       <header className="mb-6 flex items-center justify-between">
+        <a href="https://insg-cricket-auction.vercel.app/" target="_blank" rel="noreferrer"><Image src="/rovers-logo.png" width={60} height={180} /></a>
         <h1 className="font-display text-3xl">Admin console</h1>
         <span className={"h-2 w-2 rounded-full " + (connected ? "bg-grass" : "bg-ball")} />
       </header>

@@ -1,6 +1,7 @@
 import { useAuctionState } from "../lib/useAuctionState";
 import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
+import Image from "next/image";
 
 export default function Guest() {
   const { state, connected } = useAuctionState();
@@ -16,6 +17,7 @@ export default function Guest() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <header className="mb-6 flex items-center justify-between">
+        <a href="https://insg-cricket-auction.vercel.app/" target="_blank" rel="noreferrer"><Image src="/rovers-logo.png" width={60} height={180} /></a>
         <h1 className="font-display text-3xl">Live Auction Board</h1>
         <span className={"h-2 w-2 rounded-full " + (connected ? "bg-grass" : "bg-ball")} title={connected ? "Live" : "Reconnecting"} />
       </header>
