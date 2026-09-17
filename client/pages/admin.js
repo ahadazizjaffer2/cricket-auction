@@ -230,6 +230,12 @@ export default function Admin() {
           <PlayerBlock state={state} />
 
           {phase === "active" && (
+            <p className="mt-2 text-center text-xs text-cream/40">
+              {state.poolCount} player(s) left in the pool
+            </p>
+          )}
+
+          {phase === "active" && (
             <div className="mt-4 space-y-3">
               <div className="flex flex-wrap gap-2">
                 <button

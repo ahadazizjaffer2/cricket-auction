@@ -63,8 +63,9 @@ class AuctionEngine {
     const total = this.players.length;
     const base = Math.floor(total / n);
     const remainder = total % n;
-    this.teams.forEach((t, idx) => {
-      t.targetSlots = base + (idx < remainder ? 1 : 0);
+    const cap = remainder > 0 ? base + 1 : base;
+    this.teams.forEach((t) => {
+      t.targetSlots = cap;
     });
   }
 
