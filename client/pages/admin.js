@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuctionState } from "../lib/useAuctionState";
 import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
@@ -6,13 +6,25 @@ import TeamsBoard from "../components/TeamsBoard";
 const SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
 export default function Admin() {
-  const { state, connected, clockOffset, socket } = useAuctionState();
+  const { state, connected, socket } = useAuctionState();
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
   const [csvText, setCsvText] = useState("");
   const [uploadMsg, setUploadMsg] = useState("");
   const [cfgDraft, setCfgDraft] = useState(null);
+  const [teamsDraft, setTeamsDraft] = useState(null);
+  const [teamsMsg, setTeamsMsg] = useState("");
+  const [saleTeamId, setSaleTeamId] = useState("");
+  const [salePrice, setSalePrice] = useState("");
+  const [saleMsg, setSaleMsg] = useState("");
+  const [actionMsg, setActionMsg] = useState("");
+
+  useEffect(() => {
+    if (state && !teamsDraft) {
+      setTeamsDraft(state.teams.map((t) => ({ id: t.id, name: t.name })));
+    }
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function login(e) {
     e.preventDefault();
@@ -36,6 +48,29 @@ export default function Admin() {
     });
     const data = await res.json();
     setUploadMsg(data.ok ? "Players loaded." : "Error: " + data.error);
+  }
+
+  async function saveTeams() {
+    setTeamsMsg("Saving…");
+    const res = await call("admin:updateTeams", teamsDraft);
+    setTeamsMsg(res.ok ? "Saved." : "Error: " + res.error);
+  }
+
+  async function submitSale(e) {
+    e.preventDefault();
+    setSaleMsg("");
+    if (!saleTeamId || salePrice === "") {
+      setSaleMsg("Pick a team and enter a price.");
+      return;
+    }
+    const res = await call("admin:confirmSale", { teamId: saleTeamId, price: Number(salePrice) });
+    if (!res.ok) {
+      setSaleMsg(res.error);
+    } else {
+      setSaleMsg(res.overBudget ? `Sold — note: that team is now ${res.budgetRemaining} pts (over budget).` : "");
+      setSaleTeamId("");
+      setSalePrice("");
+    }
   }
 
   if (!state) {
@@ -69,6 +104,16 @@ export default function Admin() {
 
   const cfg = cfgDraft || state.cfg;
   const phase = state.auction.phase;
+  const currentPlayer = state.players.find((p) => p.id === state.auction.currentPlayerId);
+  const currentResolved = currentPlayer && currentPlayer.status !== "active";
+  const canDrawNext = phase === "active" && !state.auction.paused && !currentPlayer;
+  const canAct = phase === "active" && !state.auction.paused && currentPlayer && !currentResolved;
+
+  async function runAction(event) {
+    setActionMsg("");
+    const res = await call(event);
+    if (!res.ok) setActionMsg(res.error);
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 pb-28">
@@ -82,25 +127,15 @@ export default function Admin() {
         <section className="mb-8 rounded-xl border border-pitch-line bg-pitch-surface p-4 space-y-4">
           <h2 className="font-display text-2xl">Setup</h2>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              ["budgetTotal", "Budget per team"],
-              ["squadSize", "Squad size (incl. captain)"],
-              ["timerSeconds", "Timer (seconds)"],
-              ["minIncrement", "Min increment"],
-              ["basePriceDefault", "Base price (reserve calc)"],
-            ].map(([key, label]) => (
-              <label key={key} className="block">
-                <span className="text-cream/50">{label}</span>
-                <input
-                  type="number"
-                  value={cfg[key]}
-                  onChange={(e) => setCfgDraft({ ...cfg, [key]: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-cream"
-                />
-              </label>
-            ))}
-          </div>
+          <label className="block text-sm max-w-xs">
+            <span className="text-cream/50">Budget per team</span>
+            <input
+              type="number"
+              value={cfg.budgetTotal}
+              onChange={(e) => setCfgDraft({ ...cfg, budgetTotal: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-cream"
+            />
+          </label>
           <button
             onClick={async () => {
               await call("admin:updateConfig", cfg);
@@ -110,6 +145,38 @@ export default function Admin() {
           >
             Save config
           </button>
+
+          <hr className="border-pitch-line" />
+
+          {/* Team names */}
+          <div>
+            <h3 className="font-display text-xl mb-1">Teams</h3>
+            <p className="text-xs text-cream/40 mb-2">Team names shown to everyone. Editable until the auction starts.</p>
+            <div className="space-y-2">
+              {teamsDraft &&
+                teamsDraft.map((t, idx) => (
+                  <input
+                    key={t.id}
+                    value={t.name}
+                    onChange={(e) => {
+                      const next = [...teamsDraft];
+                      next[idx] = { ...next[idx], name: e.target.value };
+                      setTeamsDraft(next);
+                    }}
+                    placeholder="Team name"
+                    className="w-full rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-sm text-cream"
+                  />
+                ))}
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <button onClick={saveTeams} className="rounded-lg bg-gold px-4 py-2 text-sm text-pitch-bg">
+                Save teams
+              </button>
+              <span className="text-xs text-cream/40">{teamsMsg}</span>
+            </div>
+          </div>
+
+          <hr className="border-pitch-line" />
 
           <div>
             <p className="text-sm text-cream/50 mb-1">
@@ -135,6 +202,19 @@ export default function Admin() {
             </div>
           </div>
 
+          <div className="rounded-lg bg-pitch-bg/60 p-3">
+            <p className="text-xs text-cream/40 mb-2">
+              Squad size auto-splits evenly across teams ({state.players.length} players / {state.teams.length} teams):
+            </p>
+            <div className="flex flex-wrap gap-2 text-sm">
+              {state.teams.map((t) => (
+                <span key={t.id} className="rounded-full border border-pitch-line px-3 py-1">
+                  {t.name || "Team"}: <span className="text-gold">{t.targetSlots}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={() => call("admin:start")}
             className="w-full rounded-lg bg-grass px-4 py-3 font-display text-xl text-pitch-bg"
@@ -144,58 +224,94 @@ export default function Admin() {
         </section>
       )}
 
-      {/* Live controls */}
+      {/* Active controls */}
       {phase !== "setup" && (
         <>
-          <PlayerBlock state={state} clockOffset={clockOffset} />
+          <PlayerBlock state={state} />
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {phase === "live" && (
-              <button onClick={() => call("admin:pause")} className="rounded-lg border border-pitch-line px-4 py-2 text-sm">
-                Pause
-              </button>
-            )}
-            {phase === "paused" && (
-              <button onClick={() => call("admin:resume")} className="rounded-lg bg-grass/30 border border-grass px-4 py-2 text-sm">
-                Resume
-              </button>
-            )}
-            {phase === "live" && (
-              <>
-                <button onClick={() => call("admin:skipToPool")} className="rounded-lg border border-pitch-line px-4 py-2 text-sm">
-                  Skip → unsold pool
-                </button>
-                <button onClick={() => call("admin:forceUnsoldFinal")} className="rounded-lg border border-ball/60 px-4 py-2 text-sm text-ball">
-                  Mark permanently unsold
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => {
-                if (confirm("Reset the whole auction? This clears all sales.")) call("admin:reset");
-              }}
-              className="rounded-lg border border-pitch-line px-4 py-2 text-sm text-cream/50"
-            >
-              Reset auction
-            </button>
-          </div>
-
-          {phase === "live" && (
-            <div className="mt-3 rounded-xl border border-pitch-line bg-pitch-surface p-3">
-              <p className="text-xs text-cream/40 mb-2">Force-sell current player to:</p>
+          {phase === "active" && (
+            <div className="mt-4 space-y-3">
               <div className="flex flex-wrap gap-2">
-                {state.teams.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => call("admin:forceSell", { teamId: t.id })}
-                    className="rounded-lg bg-gold/20 border border-gold/50 px-3 py-1.5 text-sm"
-                  >
-                    {t.name}
+                <button
+                  onClick={() => runAction("admin:nextPlayer")}
+                  disabled={!canDrawNext}
+                  className="rounded-lg bg-grass px-4 py-2 font-display text-lg text-pitch-bg disabled:opacity-30"
+                >
+                  Next player
+                </button>
+                {!state.auction.paused ? (
+                  <button onClick={() => runAction("admin:pause")} className="rounded-lg border border-pitch-line px-4 py-2 text-sm">
+                    Pause
                   </button>
-                ))}
+                ) : (
+                  <button onClick={() => runAction("admin:resume")} className="rounded-lg bg-grass/30 border border-grass px-4 py-2 text-sm">
+                    Resume
+                  </button>
+                )}
+                {canAct && (
+                  <>
+                    <button onClick={() => runAction("admin:skipPlayer")} className="rounded-lg border border-pitch-line px-4 py-2 text-sm">
+                      Skip → back to pool
+                    </button>
+                    <button onClick={() => runAction("admin:forceUnsoldFinal")} className="rounded-lg border border-ball/60 px-4 py-2 text-sm text-ball">
+                      Mark permanently unsold
+                    </button>
+                  </>
+                )}
               </div>
+              {actionMsg && <p className="text-sm text-ball">{actionMsg}</p>}
+
+              {canAct && (
+                <form onSubmit={submitSale} className="rounded-xl border border-pitch-line bg-pitch-surface p-3 space-y-2">
+                  <p className="text-xs text-cream/40">Record the winning bid from the room:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      value={saleTeamId}
+                      onChange={(e) => setSaleTeamId(e.target.value)}
+                      className="rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-sm text-cream"
+                    >
+                      <option value="">Winning team…</option>
+                      {state.teams.map((t) => (
+                        <option key={t.id} value={t.id} disabled={t.slotsRemaining <= 0}>
+                          {t.name} {t.slotsRemaining <= 0 ? "(full)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Final price"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      className="w-32 rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-sm text-cream"
+                    />
+                    <button className="rounded-lg bg-gold px-4 py-2 text-sm text-pitch-bg">Confirm sale</button>
+                  </div>
+                  {saleTeamId &&
+                    salePrice !== "" &&
+                    (() => {
+                      const t = state.teams.find((x) => x.id === saleTeamId);
+                      const after = t ? t.budgetRemaining - Number(salePrice) : null;
+                      return after !== null && after < 0 ? (
+                        <p className="text-xs text-ball">
+                          Heads up: this leaves {t.name} at {after} pts (over budget). You can still confirm.
+                        </p>
+                      ) : null;
+                    })()}
+                  {saleMsg && <p className="text-xs text-cream/60">{saleMsg}</p>}
+                </form>
+              )}
             </div>
           )}
+
+          <button
+            onClick={() => {
+              if (confirm("Reset the whole auction? This clears all sales.")) call("admin:reset");
+            }}
+            className="mt-3 rounded-lg border border-pitch-line px-4 py-2 text-sm text-cream/50"
+          >
+            Reset auction
+          </button>
         </>
       )}
 

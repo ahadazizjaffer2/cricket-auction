@@ -1,14 +1,10 @@
 {
   "adminPassword": "changeme123",
   "budgetTotal": 50,
-  "squadSize": 8,
-  "timerSeconds": 12,
-  "minIncrement": 1,
-  "basePriceDefault": 1,
   "teams": [
-    { "id": "team1", "name": "Team Falcons", "pin": "1111" },
-    { "id": "team2", "name": "Team Titans", "pin": "2222" },
-    { "id": "team3", "name": "Team Warriors", "pin": "3333" },
-    { "id": "team4", "name": "Team Strikers", "pin": "4444" }
+    { "id": "team1", "name": "Team Falcons" },
+    { "id": "team2", "name": "Team Titans" },
+    { "id": "team3", "name": "Team Warriors" },
+    { "id": "team4", "name": "Team Strikers" }
   ]
 }

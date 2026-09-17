@@ -14,12 +14,6 @@ export default function Home() {
           Watch as a guest
         </Link>
         <Link
-          href="/captain"
-          className="block rounded-xl border border-gold/50 bg-gold/10 px-5 py-4 font-display text-2xl text-gold hover:bg-gold/20 transition-colors"
-        >
-          I&apos;m a captain
-        </Link>
-        <Link
           href="/admin"
           className="block rounded-xl border border-pitch-line px-5 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
         >

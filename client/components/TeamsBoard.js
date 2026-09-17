@@ -1,5 +1,5 @@
 export default function TeamsBoard({ state, highlightTeamId }) {
-  const { teams, cfg } = state;
+  const { teams } = state;
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {teams.map((t) => (
@@ -14,13 +14,13 @@ export default function TeamsBoard({ state, highlightTeamId }) {
         >
           <div className="flex items-baseline justify-between">
             <h3 className="font-display text-2xl">{t.name}</h3>
-            <p className="font-display text-xl text-gold tabular">
+            <p className={"font-display text-xl tabular " + (t.budgetRemaining < 0 ? "text-ball" : "text-gold")}>
               {t.budgetRemaining}
               <span className="text-sm text-cream/40"> / {t.budgetTotal} pts</span>
             </p>
           </div>
           <p className="text-xs text-cream/40 mt-0.5">
-            {t.squad.length} / {cfg.auctionSlots} bought
+            {t.squad.length} / {t.targetSlots} bought
           </p>
           <ul className="mt-2 space-y-1 text-sm">
             {t.squad.length === 0 && <li className="text-cream/30">No players yet</li>}

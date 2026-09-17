@@ -3,7 +3,7 @@ import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
 
 export default function Guest() {
-  const { state, connected, clockOffset } = useAuctionState();
+  const { state, connected } = useAuctionState();
 
   if (!state) {
     return (
@@ -20,7 +20,11 @@ export default function Guest() {
         <span className={"h-2 w-2 rounded-full " + (connected ? "bg-grass" : "bg-ball")} title={connected ? "Live" : "Reconnecting"} />
       </header>
 
-      <PlayerBlock state={state} clockOffset={clockOffset} />
+      <PlayerBlock state={state} />
+
+      {state.auction.phase === "active" && (
+        <p className="mt-2 text-center text-xs text-cream/30">{state.poolCount} player(s) left in the pool</p>
+      )}
 
       <section className="mt-8">
         <h2 className="font-display text-2xl text-cream/80 mb-3">Teams</h2>

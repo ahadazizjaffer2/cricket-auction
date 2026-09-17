@@ -18,7 +18,7 @@ function loadPlayersFromCsv(csvPath) {
     name: row.name || "Player " + (idx + 1),
     category: row.category || "",
     basePrice: Math.max(1, parseInt(row.baseprice, 10) || 1),
-    status: "queued", // queued | active | sold | unsold_pool
+    status: "pool", // pool | active | sold | unsold_final
     order: idx,
     soldTo: null,
     soldPrice: null,
@@ -39,23 +39,33 @@ class AuctionEngine {
     this.teams = this.cfg.teams.map((t) => ({
       id: t.id,
       name: t.name,
-      pin: t.pin,
       budgetTotal: this.cfg.budgetTotal,
       budgetRemaining: this.cfg.budgetTotal,
       squad: [], // [{playerId, name, price}]
     }));
+    this.pool = []; // ids available to be randomly drawn
     this.auction = {
-      phase: "setup", // setup | live | paused | complete
+      phase: "setup", // setup | active | complete
+      paused: false,
       currentPlayerId: null,
-      currentBid: 0,
-      currentBidTeamId: null,
-      timerEndsAt: null,
-      queue: [],
-      unsoldPool: [],
-      round: 1,
       log: [],
     };
+    this.computeTeamTargets();
     if (!initial) this._log("Auction reset.");
+  }
+
+  // Distributes the loaded players as evenly as possible across teams.
+  // e.g. 25 players / 4 teams -> three teams get 6, one gets 7.
+  // 26 players / 4 teams -> two teams get 6, two get 7.
+  computeTeamTargets() {
+    const n = this.teams.length;
+    if (n === 0) return;
+    const total = this.players.length;
+    const base = Math.floor(total / n);
+    const remainder = total % n;
+    this.teams.forEach((t, idx) => {
+      t.targetSlots = base + (idx < remainder ? 1 : 0);
+    });
   }
 
   loadPlayersCsvFromBuffer(buffer) {
@@ -67,22 +77,22 @@ class AuctionEngine {
       name: row.name || "Player " + (idx + 1),
       category: row.category || "",
       basePrice: Math.max(1, parseInt(row.baseprice, 10) || 1),
-      status: "queued",
+      status: "pool",
       order: idx,
       soldTo: null,
       soldPrice: null,
     }));
+    this.computeTeamTargets();
     this._log(`Loaded ${this.players.length} players from uploaded CSV.`);
   }
 
   updateConfig(partial) {
-    const allowed = ["budgetTotal", "squadSize", "timerSeconds", "minIncrement", "basePriceDefault"];
+    const allowed = ["budgetTotal"];
     for (const k of allowed) {
       if (partial[k] !== undefined && !Number.isNaN(Number(partial[k]))) {
         this.cfg[k] = Number(partial[k]);
       }
     }
-    // re-apply budgets if not yet started
     if (this.auction.phase === "setup") {
       this.teams.forEach((t) => {
         t.budgetTotal = this.cfg.budgetTotal;
@@ -92,24 +102,31 @@ class AuctionEngine {
     this._log("Config updated.");
   }
 
+  updateTeams(teamsInput) {
+    if (this.auction.phase !== "setup") {
+      return { ok: false, error: "Teams can only be edited before the auction starts." };
+    }
+    if (!Array.isArray(teamsInput) || teamsInput.length !== this.teams.length) {
+      return { ok: false, error: "Expected " + this.teams.length + " teams." };
+    }
+    const names = teamsInput.map((t) => String(t.name || "").trim());
+    if (names.some((n) => n.length === 0)) return { ok: false, error: "Every team needs a name." };
+
+    teamsInput.forEach((_, idx) => {
+      this.teams[idx].name = names[idx];
+    });
+    this.cfg.teams = this.teams.map((t) => ({ id: t.id, name: t.name }));
+    this._log("Team names updated.");
+    return { ok: true };
+  }
+
   // ---------- auth ----------
 
   checkAdminPassword(pw) {
     return pw === this.cfg.adminPassword;
   }
 
-  authenticateCaptain(teamId, pin) {
-    const team = this.teams.find((t) => t.id === teamId);
-    if (!team) return { ok: false, error: "No such team." };
-    if (String(team.pin) !== String(pin)) return { ok: false, error: "Wrong PIN." };
-    return { ok: true, teamId: team.id, teamName: team.name };
-  }
-
   // ---------- auction flow ----------
-
-  auctionSlots() {
-    return Math.max(1, this.cfg.squadSize - 1);
-  }
 
   startAuction() {
     if (this.auction.phase !== "setup" && this.auction.phase !== "complete") {
@@ -117,9 +134,8 @@ class AuctionEngine {
     }
     if (this.players.length === 0) return { ok: false, error: "No players loaded." };
 
-    // reset player/team state but keep loaded players & config
     this.players.forEach((p) => {
-      p.status = "queued";
+      p.status = "pool";
       p.soldTo = null;
       p.soldPrice = null;
     });
@@ -127,156 +143,106 @@ class AuctionEngine {
       t.budgetRemaining = this.cfg.budgetTotal;
       t.squad = [];
     });
+    this.computeTeamTargets();
 
-    this.auction.queue = this.players.map((p) => p.id);
-    this.auction.unsoldPool = [];
-    this.auction.round = 1;
-    this.auction.phase = "live";
+    this.pool = this.players.map((p) => p.id);
+    this.auction.phase = "active";
+    this.auction.paused = false;
+    this.auction.currentPlayerId = null;
     this.auction.log = [];
-    this._log("Auction started.");
-    this._activateNext();
+    this._log(`Auction started with ${this.pool.length} players in the pool.`);
+    return { ok: true };
+  }
+
+  // Randomly draws the next player from the pool and puts them on the block.
+  // If the current player was already resolved (sold / permanently unsold),
+  // clear them off the block first so guests saw the result before it moves on.
+  nextPlayer() {
+    if (this.auction.phase !== "active") return { ok: false, error: "Auction is not active." };
+    if (this.auction.paused) return { ok: false, error: "Auction is paused." };
+    if (this.auction.currentPlayerId) {
+      const current = this.players.find((p) => p.id === this.auction.currentPlayerId);
+      if (current && current.status === "active") {
+        return { ok: false, error: "Resolve the current player first (sell, skip, or mark unsold)." };
+      }
+      this.auction.currentPlayerId = null;
+    }
+    if (this.pool.length === 0) {
+      this.auction.phase = "complete";
+      this._log("Auction complete — no players left in the pool.");
+      return { ok: true, complete: true };
+    }
+    const idx = Math.floor(Math.random() * this.pool.length);
+    const playerId = this.pool.splice(idx, 1)[0];
+    const player = this.players.find((p) => p.id === playerId);
+    player.status = "active";
+    this.auction.currentPlayerId = player.id;
+    this._log(`${player.name} is on the block (base ${player.basePrice}).`);
     return { ok: true };
   }
 
   pauseAuction() {
-    if (this.auction.phase !== "live") return { ok: false, error: "Not live." };
-    this.auction.phase = "paused";
-    this._pausedRemainingMs = this.auction.timerEndsAt ? this.auction.timerEndsAt - Date.now() : null;
+    if (this.auction.phase !== "active") return { ok: false, error: "Not active." };
+    this.auction.paused = true;
     this._log("Auction paused.");
     return { ok: true };
   }
 
   resumeAuction() {
-    if (this.auction.phase !== "paused") return { ok: false, error: "Not paused." };
-    this.auction.phase = "live";
-    const remaining = this._pausedRemainingMs ?? this.cfg.timerSeconds * 1000;
-    this.auction.timerEndsAt = Date.now() + Math.max(1000, remaining);
+    if (this.auction.phase !== "active") return { ok: false, error: "Not active." };
+    this.auction.paused = false;
     this._log("Auction resumed.");
     return { ok: true };
   }
 
-  _activateNext() {
-    if (this.auction.queue.length === 0) {
-      if (this.auction.unsoldPool.length > 0) {
-        this.auction.round += 1;
-        this._log(`Round ${this.auction.round}: revisiting ${this.auction.unsoldPool.length} unsold player(s).`);
-        this.auction.queue = this.auction.unsoldPool;
-        this.auction.unsoldPool = [];
-      } else {
-        this.auction.phase = "complete";
-        this.auction.currentPlayerId = null;
-        this.auction.currentBid = 0;
-        this.auction.currentBidTeamId = null;
-        this.auction.timerEndsAt = null;
-        this._log("Auction complete — all players sold.");
-        return;
-      }
+  confirmSale({ teamId, price }) {
+    if (this.auction.phase !== "active" || this.auction.paused) {
+      return { ok: false, error: "Auction is not active." };
     }
-
-    const nextId = this.auction.queue.shift();
-    const player = this.players.find((p) => p.id === nextId);
-    if (!player) {
-      this._activateNext(); // skip missing, defensive
-      return;
-    }
-    player.status = "active";
-    this.auction.currentPlayerId = player.id;
-    this.auction.currentBid = player.basePrice;
-    this.auction.currentBidTeamId = null;
-    this.auction.timerEndsAt = Date.now() + this.cfg.timerSeconds * 1000;
-    this._log(`${player.name} is on the block (base ${player.basePrice}).`);
-  }
-
-  maxAllowedBid(team) {
-    const auctionSlots = this.auctionSlots();
-    const slotsRemaining = auctionSlots - team.squad.length;
-    if (slotsRemaining <= 0) return null; // squad full
-    const reserveForRest = (slotsRemaining - 1) * this.cfg.basePriceDefault;
-    return team.budgetRemaining - reserveForRest;
-  }
-
-  placeBid(teamId, amount) {
-    if (this.auction.phase !== "live") return { ok: false, error: "Bidding is not open." };
+    const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
+    if (!player || player.status !== "active") return { ok: false, error: "No player on the block." };
     const team = this.teams.find((t) => t.id === teamId);
     if (!team) return { ok: false, error: "Unknown team." };
-    const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
-    if (!player) return { ok: false, error: "No active player." };
 
-    const amt = Number(amount);
-    if (!Number.isFinite(amt)) return { ok: false, error: "Invalid amount." };
-    if (amt <= this.auction.currentBid) return { ok: false, error: "Bid must be higher than the current bid." };
-    if (amt < player.basePrice) return { ok: false, error: "Bid must meet the base price." };
-
-    const max = this.maxAllowedBid(team);
-    if (max === null) return { ok: false, error: "Your squad is already full." };
-    if (amt > max) return { ok: false, error: `Max bid right now is ${max} (must leave enough for remaining slots).` };
-    if (teamId === this.auction.currentBidTeamId) return { ok: false, error: "You're already the top bidder." };
-
-    this.auction.currentBid = amt;
-    this.auction.currentBidTeamId = teamId;
-    this.auction.timerEndsAt = Date.now() + this.cfg.timerSeconds * 1000;
-    this._log(`${team.name} bids ${amt} for ${player.name}.`);
-    return { ok: true };
-  }
-
-  // called periodically (server interval, or admin-driven tick) to resolve expired timers
-  tick() {
-    if (this.auction.phase !== "live") return;
-    if (!this.auction.timerEndsAt) return;
-    if (Date.now() < this.auction.timerEndsAt) return;
-    this._resolveCurrentPlayer();
-  }
-
-  _resolveCurrentPlayer() {
-    const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
-    if (!player) return;
-
-    if (this.auction.currentBidTeamId) {
-      const team = this.teams.find((t) => t.id === this.auction.currentBidTeamId);
-      player.status = "sold";
-      player.soldTo = team.id;
-      player.soldPrice = this.auction.currentBid;
-      team.budgetRemaining -= this.auction.currentBid;
-      team.squad.push({ playerId: player.id, name: player.name, price: this.auction.currentBid });
-      this._log(`SOLD: ${player.name} to ${team.name} for ${this.auction.currentBid}.`);
-    } else {
-      player.status = "unsold_pool";
-      this.auction.unsoldPool.push(player.id);
-      this._log(`${player.name} went unsold — moved to the retry pool.`);
+    const amt = Number(price);
+    if (!Number.isFinite(amt) || amt < 0) return { ok: false, error: "Enter a valid price." };
+    if (team.squad.length >= team.targetSlots) {
+      return { ok: false, error: `${team.name}'s squad is already full (${team.targetSlots} players).` };
     }
-    this._activateNext();
+
+    player.status = "sold";
+    player.soldTo = team.id;
+    player.soldPrice = amt;
+    team.budgetRemaining -= amt; // allowed to go negative — tracked, not blocked
+    team.squad.push({ playerId: player.id, name: player.name, price: amt });
+
+    const overBudget = team.budgetRemaining < 0;
+    this._log(
+      `SOLD: ${player.name} to ${team.name} for ${amt}.` +
+        (overBudget ? ` ${team.name} is now ${team.budgetRemaining} pts (over budget).` : "")
+    );
+    return { ok: true, overBudget, budgetRemaining: team.budgetRemaining };
   }
 
-  // ---------- admin overrides ----------
-
-  forceSell(teamId) {
-    if (this.auction.phase !== "live") return { ok: false, error: "Not live." };
-    const team = this.teams.find((t) => t.id === teamId);
-    if (!team) return { ok: false, error: "Unknown team." };
-    this.auction.currentBidTeamId = teamId;
-    if (this.auction.currentBid < this.players.find((p) => p.id === this.auction.currentPlayerId).basePrice) {
-      this.auction.currentBid = this.players.find((p) => p.id === this.auction.currentPlayerId).basePrice;
-    }
-    this._resolveCurrentPlayer();
+  // Returns the current player to the pool without recording a sale
+  // (e.g. the room wants to come back to them later).
+  skipPlayer() {
+    if (this.auction.phase !== "active") return { ok: false, error: "Not active." };
+    const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
+    if (!player || player.status !== "active") return { ok: false, error: "No player on the block." };
+    player.status = "pool";
+    this.pool.push(player.id);
+    this.auction.currentPlayerId = null;
+    this._log(`${player.name} skipped — back in the pool.`);
     return { ok: true };
   }
 
   forceUnsoldFinal() {
-    if (this.auction.phase !== "live") return { ok: false, error: "Not live." };
+    if (this.auction.phase !== "active") return { ok: false, error: "Not active." };
     const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
-    if (!player) return { ok: false, error: "No active player." };
+    if (!player || player.status !== "active") return { ok: false, error: "No player on the block." };
     player.status = "unsold_final";
     this._log(`${player.name} permanently marked unsold by admin.`);
-    this._activateNext();
-    return { ok: true };
-  }
-
-  skipToPool() {
-    if (this.auction.phase !== "live") return { ok: false, error: "Not live." };
-    const player = this.players.find((p) => p.id === this.auction.currentPlayerId);
-    if (!player) return { ok: false, error: "No active player." };
-    this.auction.currentBidTeamId = null;
-    this._resolveCurrentPlayer();
     return { ok: true };
   }
 
@@ -291,11 +257,6 @@ class AuctionEngine {
     return {
       cfg: {
         budgetTotal: this.cfg.budgetTotal,
-        squadSize: this.cfg.squadSize,
-        auctionSlots: this.auctionSlots(),
-        timerSeconds: this.cfg.timerSeconds,
-        minIncrement: this.cfg.minIncrement,
-        basePriceDefault: this.cfg.basePriceDefault,
       },
       teams: this.teams.map((t) => ({
         id: t.id,
@@ -303,9 +264,11 @@ class AuctionEngine {
         budgetTotal: t.budgetTotal,
         budgetRemaining: t.budgetRemaining,
         squad: t.squad,
-        slotsRemaining: this.auctionSlots() - t.squad.length,
+        targetSlots: t.targetSlots,
+        slotsRemaining: (t.targetSlots ?? 0) - t.squad.length,
       })),
       players: this.players,
+      poolCount: this.pool.length,
       auction: this.auction,
     };
   }
