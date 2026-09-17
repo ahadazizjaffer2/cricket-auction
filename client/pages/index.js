@@ -1,11 +1,16 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
-      <img
+      <Image
         src="/rovers-logo.png"
         alt="Rovers Cricket Tournament"
+        width={512}
+        height={180}
+        priority
+        quality={100}
         className="mb-5 h-auto w-64 max-w-full"
       />
       <a
@@ -21,8 +26,8 @@ export default function Home() {
           className="h-8 w-auto max-w-32 object-contain"
         />
       </a>
-      <p className="text-xs uppercase tracking-wide text-cream/40">Live Auction</p>
-      <h1 className="font-display text-6xl text-cream mt-1">Pick your seat</h1>
+      
+      <h1 className="font-display text-6xl text-cream mt-4">Live Auction</h1>
 
       <div className="mt-8 w-full space-y-3">
         <Link
