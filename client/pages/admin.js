@@ -106,7 +106,7 @@ export default function Admin() {
   const phase = state.auction.phase;
   const currentPlayer = state.players.find((p) => p.id === state.auction.currentPlayerId);
   const currentResolved = currentPlayer && currentPlayer.status !== "active";
-  const canDrawNext = phase === "active" && !state.auction.paused && !currentPlayer;
+  const canDrawNext = phase === "active" && !state.auction.paused && (!currentPlayer || currentResolved);
   const canAct = phase === "active" && !state.auction.paused && currentPlayer && !currentResolved;
 
   async function runAction(event) {
