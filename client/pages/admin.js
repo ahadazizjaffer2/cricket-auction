@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuctionState } from "../lib/useAuctionState";
 import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
+import TierProgress from "../components/TierProgress";
 import Image from "next/image";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
@@ -107,7 +108,7 @@ export default function Admin() {
   const phase = state.auction.phase;
   const currentPlayer = state.players.find((p) => p.id === state.auction.currentPlayerId);
   const currentResolved = currentPlayer && currentPlayer.status !== "active";
-  const canDrawNext = phase === "active" && !state.auction.paused && (!currentPlayer || currentResolved);
+  const canDrawNext = phase === "active" && !state.auction.paused && (!currentPlayer || currentResolved) && !state.auction.tierPending;
   const canAct = phase === "active" && !state.auction.paused && currentPlayer && !currentResolved;
 
   async function runAction(event) {
@@ -119,7 +120,7 @@ export default function Admin() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 pb-28">
       <header className="mb-6 flex items-center justify-between">
-        <a href="https://insg-cricket-auction.vercel.app/" >
+        <a href="https://insg-cricket-auction.vercel.app/">
           <Image src="/rovers-logo.png" width={60} height={180} />
         </a>
         <h1 className="font-display text-3xl">Admin console</h1>
@@ -185,13 +186,15 @@ export default function Admin() {
           <div>
             <p className="text-sm text-cream/50 mb-1">
               {state.players.length} players currently loaded. Paste a new CSV to replace them
-              (columns: <code>name,category,basePrice</code>).
+              (columns: <code>name,category,basePrice</code> — category must be one of Diamond,
+              Platinum, Gold, Silver, or Bronze; &quot;Emerging&quot; and &quot;Emerging Players&quot;
+              are accepted as aliases for Bronze. Anything else lands in an &quot;Unlisted&quot; group).
             </p>
             <textarea
               rows={5}
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
-              placeholder={"name,category,basePrice\nVirat,Batsman,2\nBumrah,Bowler,2"}
+              placeholder={"name,category,basePrice\nVirat,Diamond,4\nBumrah,Gold,2\nRohit,Bronze,1"}
               className="w-full rounded-lg border border-pitch-line bg-pitch-bg px-3 py-2 text-sm text-cream font-mono"
             />
             <div className="mt-2 flex items-center gap-3">
@@ -207,16 +210,17 @@ export default function Admin() {
           </div>
 
           <div className="rounded-lg bg-pitch-bg/60 p-3">
+            <p className="text-xs text-cream/40 mb-2">Draw order (players per tier):</p>
+            <TierProgress state={{ tiers: state.tiers, auction: { currentTier: null } }} />
+          </div>
+
+          <div className="rounded-lg bg-pitch-bg/60 p-3">
             <p className="text-xs text-cream/40 mb-2">
-              Squad size auto-splits evenly across teams ({state.players.length} players / {state.teams.length} teams):
+              {state.players.length} players / {state.teams.length} teams — each team can buy up to{" "}
+              <span className="text-gold">{state.teams[0]?.targetSlots ?? "?"}</span> players. If that doesn&apos;t
+              divide evenly, whichever team(s) actually win the extra player(s) in the room end up with one more —
+              nothing&apos;s pre-assigned.
             </p>
-            <div className="flex flex-wrap gap-2 text-sm">
-              {state.teams.map((t) => (
-                <span key={t.id} className="rounded-full border border-pitch-line px-3 py-1">
-                  {t.name || "Team"}: <span className="text-gold">{t.targetSlots}</span>
-                </span>
-              ))}
-            </div>
           </div>
 
           <button
@@ -231,6 +235,12 @@ export default function Admin() {
       {/* Active controls */}
       {phase !== "setup" && (
         <>
+          {phase === "active" && (
+            <div className="mb-4">
+              <TierProgress state={state} />
+            </div>
+          )}
+
           <PlayerBlock state={state} />
 
           {phase === "active" && (
@@ -241,14 +251,46 @@ export default function Admin() {
 
           {phase === "active" && (
             <div className="mt-4 space-y-3">
+              {/* Tier picker — shown whenever the admin needs to choose which tier to run */}
+              {state.auction.tierPending && (
+                <div className="rounded-xl border border-gold/40 bg-pitch-surface p-4 space-y-2">
+                  <p className="text-sm text-cream/60">
+                    {state.auction.currentTier
+                      ? `${state.auction.currentTier} round is done. Choose the next tier to run:`
+                      : "Auction started — choose the first tier to run:"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(state.availableTiers || []).map((tier) => {
+                      const info = (state.tiers || []).find((t) => t.tier === tier);
+                      return (
+                        <button
+                          key={tier}
+                          onClick={() => call("admin:startNextTier", { tier })}
+                          className="rounded-lg bg-gold px-4 py-2 font-display text-lg text-pitch-bg hover:bg-gold/80 transition-colors"
+                        >
+                          {tier}
+                          {info ? (
+                            <span className="ml-1 text-sm font-body text-pitch-bg/70">
+                              ({info.remaining})
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => runAction("admin:nextPlayer")}
-                  disabled={!canDrawNext}
-                  className="rounded-lg bg-grass px-4 py-2 font-display text-lg text-pitch-bg disabled:opacity-30"
-                >
-                  Next player
-                </button>
+                {!state.auction.tierPending && (
+                  <button
+                    onClick={() => runAction("admin:nextPlayer")}
+                    disabled={!canDrawNext}
+                    className="rounded-lg bg-grass px-4 py-2 font-display text-lg text-pitch-bg disabled:opacity-30"
+                  >
+                    Next player
+                  </button>
+                )}
                 {!state.auction.paused ? (
                   <button onClick={() => runAction("admin:pause")} className="rounded-lg border border-pitch-line px-4 py-2 text-sm">
                     Pause

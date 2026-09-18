@@ -1,6 +1,7 @@
 import { useAuctionState } from "../lib/useAuctionState";
 import PlayerBlock from "../components/PlayerBlock";
 import TeamsBoard from "../components/TeamsBoard";
+import TierProgress from "../components/TierProgress";
 import Image from "next/image";
 
 export default function Guest() {
@@ -23,6 +24,12 @@ export default function Guest() {
         <h1 className="font-display text-3xl">Live Auction Board</h1>
         <span className={"h-2 w-2 rounded-full " + (connected ? "bg-grass" : "bg-ball")} title={connected ? "Live" : "Reconnecting"} />
       </header>
+
+      {state.auction.phase === "active" && (
+        <div className="mb-4">
+          <TierProgress state={state} />
+        </div>
+      )}
 
       <PlayerBlock state={state} />
 

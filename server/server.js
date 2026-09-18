@@ -84,6 +84,14 @@ io.on("connection", (socket) => {
     broadcastState();
   });
 
+  socket.on("admin:startNextTier", (payload, cb) => {
+    if (!requireAdmin(cb)) return;
+    const tier = (payload || {}).tier;
+    const r = engine.startNextTier(tier);
+    cb && cb(r);
+    broadcastState();
+  });
+
   socket.on("admin:confirmSale", (payload, cb) => {
     if (!requireAdmin(cb)) return;
     const r = engine.confirmSale(payload || {});

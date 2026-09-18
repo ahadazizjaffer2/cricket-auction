@@ -1,4 +1,39 @@
-# Cricket-style Player Auction — Physical Bidding Edition
+# Cricket-style Player Auction — Tiered Categories Edition
+
+Branched from `physical-bidding`. Adds **5 teams** and a **fixed category
+draw order**: Diamond → Platinum → Gold → Silver → Bronze → Emerging.
+Within a tier, players are drawn randomly; once a tier's players are all
+resolved, the admin gets an explicit **Start next tier** button — nothing
+advances on its own.
+
+## How the tier order works
+
+- Every player's `category` in the CSV should be one of: `Diamond`,
+  `Platinum`, `Gold`, `Silver`, `Bronze`, `Emerging`. Matching is
+  case/whitespace insensitive (`" diamond "`, `DIAMOND`, `Diamond` all match).
+- Anything that doesn't match (typo, blank, different word) is bucketed
+  into an **Unlisted** group and drawn last, after Emerging — so a typo never
+  silently disrupts the intended order. The Setup screen shows a
+  tier-by-tier player count before you start, specifically so you can catch
+  this ahead of time.
+- Empty tiers are skipped automatically (no "Start next tier" click needed
+  for a tier with zero players) — the explicit step only appears between
+  tiers that actually have players.
+- **Next player** always draws from the *current* tier only. Once every
+  player in that tier is either sold or permanently marked unsold (skipped
+  players stay in the tier, so skipping never closes it out), the button
+  is replaced by **Start next tier**.
+- The 5-team squad caps and the "any team can win the extra player" logic
+  from before are unchanged — they're computed from the total player count
+  across all tiers combined, not per tier.
+
+## Teams
+
+`server/config.json` now has 5 placeholder teams — rename them from
+Admin → Setup (or edit the file directly) before your event, same as
+before.
+
+---
 
 This is the "physical bidding" branch: bidding itself happens live in the
 room, not on captains' phones. There's no captain view or login at all.

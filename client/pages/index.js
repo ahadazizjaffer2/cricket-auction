@@ -37,6 +37,12 @@ export default function Home() {
           Watch as a guest
         </Link>
         <Link
+          href="/rules"
+          className="block rounded-xl border border-pitch-line px-5 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
+        >
+          Rules &amp; Regulations
+        </Link>
+        <Link
           href="/admin"
           className="block rounded-xl border border-pitch-line px-5 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
         >

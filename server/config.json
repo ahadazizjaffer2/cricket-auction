@@ -5,6 +5,7 @@
     { "id": "team1", "name": "Team Falcons" },
     { "id": "team2", "name": "Team Titans" },
     { "id": "team3", "name": "Team Warriors" },
-    { "id": "team4", "name": "Team Strikers" }
+    { "id": "team4", "name": "Team Strikers" },
+    { "id": "team5", "name": "Team Eagles" }
   ]
 }
