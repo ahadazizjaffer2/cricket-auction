@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Download } from "lucide-react";
 
 const matchSections = [
   {
@@ -79,64 +80,6 @@ const matchSections = [
   },
 ];
 
-const auctionSections = [
-  {
-    number: "1",
-    title: "Auction Timing",
-    items: [
-      "Auction Start Time: 8:15 PM.",
-      "All captains must be present and ready before the auction begins.",
-      "The auction will begin promptly at 8:15 PM.",
-    ],
-  },
-  {
-    number: "2",
-    title: "Squad Selection",
-    items: [
-      "Each captain starts with a budget of Rs. 50.",
-      "Each captain must purchase 6 players through the auction.",
-      "The captain's own participation is separate — the auction budget is used to select the 6 additional players.",
-      "The minimum player price is Rs. 2.",
-      "A captain cannot purchase a player if doing so would leave insufficient budget to complete their remaining squad.",
-    ],
-  },
-  {
-    number: "3",
-    title: "Reserve Budget Rule",
-    items: [
-      "To ensure every captain can complete their squad, a captain must always reserve enough money to purchase all remaining players at the minimum price of Rs. 2 each.",
-    ],
-    formula: "Maximum Bid = Current Budget − (Players Remaining × Rs. 2)",
-    reserveTable: [
-      { players: 6, reserve: "Rs. 12" },
-      { players: 5, reserve: "Rs. 10" },
-      { players: 4, reserve: "Rs. 8" },
-      { players: 3, reserve: "Rs. 6" },
-      { players: 2, reserve: "Rs. 4" },
-      { players: 1, reserve: "Rs. 2" },
-    ],
-  },
-  {
-    number: "4",
-    title: "Auction Procedure",
-    items: [
-      "The auctioneer announces the player available for bidding.",
-      "Captains place their bids according to the auctioneer's instructions.",
-      "The highest valid bid wins the player.",
-      "The winning amount is deducted from the captain's remaining budget.",
-      "The reserve budget rule applies after every successful purchase.",
-      "Once a captain has selected all 6 players, they may no longer participate in further bidding.",
-    ],
-  },
-  {
-    number: "5",
-    title: "Important Rule",
-    items: [
-      "A captain may not place a bid that would leave them with less than Rs. 2 for each player still required.",
-      "All bids must remain within the captain's available budget and reserve requirement.",
-    ],
-  },
-];
 
 function Section({ sec }) {
   return (
@@ -205,30 +148,15 @@ export default function Rules() {
         </Link>
         <h1 className="font-display text-3xl">Rules &amp; Regulations</h1>
         <a
-          href="/Cricket_Auction_Rules_and_Timings.pdf"
-          download="Cricket_Auction_Rules_and_Timings.pdf"
-          className="rounded-lg border border-pitch-line px-4 py-2 text-sm text-cream/60 hover:text-cream hover:border-grass transition-colors"
+          href="/Rover InterPatrol Cricket Rules.pdf"
+          download="Rover InterPatrol Cricket Rules.pdf"
+          className="flex items-center gap-1.5 rounded-lg border border-pitch-line px-4 py-2 text-sm text-cream/60 hover:text-cream hover:border-grass transition-colors"
         >
-          ↓ Download
+          <Download size={14} />
+          Rules PDF
         </a>
       </header>
 
-      {/* Auction Rules */}
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="font-display text-xl text-cream/50 uppercase tracking-widest">Auction Rules</h2>
-        <div className="flex-1 border-t border-pitch-line" />
-      </div>
-      <div className="space-y-4 mb-10">
-        {auctionSections.map((sec) => (
-          <Section key={sec.number + sec.title} sec={sec} />
-        ))}
-      </div>
-
-      {/* Match Rules */}
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="font-display text-xl text-cream/50 uppercase tracking-widest">Match Rules</h2>
-        <div className="flex-1 border-t border-pitch-line" />
-      </div>
       <div className="space-y-4">
         {matchSections.map((sec) => (
           <Section key={sec.number + sec.title} sec={sec} />
