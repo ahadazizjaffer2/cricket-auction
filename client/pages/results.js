@@ -4,17 +4,18 @@ import fs from "fs";
 import path from "path";
 
 const CATEGORY_STYLES = {
-  Diamond: "text-sky-300 border-sky-400/40 bg-sky-400/10",
-  Platinum: "text-slate-200 border-slate-300/40 bg-slate-300/10",
-  Gold: "text-gold border-gold/40 bg-gold/10",
-  Silver: "text-zinc-200 border-zinc-300/40 bg-zinc-300/10",
-  Bronze: "text-orange-300 border-orange-400/40 bg-orange-400/10",
+  Diamond:  { badge: "text-sky-300 border-sky-400/40 bg-sky-400/10",    bar: "bg-sky-400" },
+  Platinum: { badge: "text-slate-200 border-slate-300/40 bg-slate-300/10", bar: "bg-slate-300" },
+  Gold:     { badge: "text-gold border-gold/40 bg-gold/10",             bar: "bg-gold" },
+  Silver:   { badge: "text-zinc-300 border-zinc-300/40 bg-zinc-300/10", bar: "bg-zinc-300" },
+  Bronze:   { badge: "text-orange-300 border-orange-400/40 bg-orange-400/10", bar: "bg-orange-400" },
+  Unlisted: { badge: "text-cream/50 border-cream/20 bg-cream/5",        bar: "bg-cream/20" },
 };
 
 function CategoryBadge({ category }) {
-  const cls = CATEGORY_STYLES[category] || "text-cream/60 border-cream/30 bg-cream/5";
+  const styles = CATEGORY_STYLES[category] || CATEGORY_STYLES.Unlisted;
   return (
-    <span className={"rounded-full border px-2 py-0.5 text-xs font-display tracking-wide " + cls}>
+    <span className={"rounded-full border px-2 py-0.5 text-xs font-display tracking-wide flex-shrink-0 " + styles.badge}>
       {category}
     </span>
   );
@@ -34,43 +35,53 @@ function ComingSoon() {
   );
 }
 
-function TeamCard({ team, rank }) {
+function TeamCard({ team }) {
   const budgetRemaining = team.budgetTotal - team.budgetSpent;
   const isOverBudget = budgetRemaining < 0;
+  const spentPct = Math.min(100, Math.round((team.budgetSpent / team.budgetTotal) * 100));
 
   return (
-    <div className="rounded-xl border border-pitch-line bg-pitch-surface p-5">
-      <div className="flex items-start justify-between mb-1">
-        <div className="flex items-center gap-2">
-          {rank <= 2 && (
-            <span className="font-display text-2xl">{rank === 1 ? "🥇" : "🥈"}</span>
+    <div className="rounded-2xl border border-pitch-line bg-pitch-surface overflow-hidden">
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-3xl text-cream leading-none">{team.name}</h2>
+          {team.captain && (
+            <p className="text-xs text-cream/40 mt-0.5 uppercase tracking-wide">
+              Captain · {team.captain}
+            </p>
           )}
-          <h2 className="font-display text-2xl text-cream">{team.name}</h2>
         </div>
         <div className="text-right">
-          <p className={"font-display text-xl tabular " + (isOverBudget ? "text-ball" : "text-gold")}>
-            {team.budgetSpent} <span className="text-sm text-cream/40">/ {team.budgetTotal} pts spent</span>
+          <p className={"font-display text-2xl tabular " + (isOverBudget ? "text-ball" : "text-gold")}>
+            {team.budgetSpent}
+            <span className="text-sm text-cream/30 font-body"> / {team.budgetTotal} pts</span>
           </p>
+          <p className="text-xs text-cream/30 mt-0.5">{budgetRemaining} pts remaining</p>
         </div>
       </div>
 
-      {team.captain && (
-        <p className="text-xs text-cream/40 mb-3">Captain: {team.captain}</p>
-      )}
+      {/* Budget bar */}
+      <div className="mx-5 mb-4 h-1 rounded-full bg-pitch-line overflow-hidden">
+        <div
+          className={"h-full rounded-full " + (isOverBudget ? "bg-ball" : "bg-grass")}
+          style={{ width: spentPct + "%" }}
+        />
+      </div>
 
-      <ul className="mt-3 space-y-2">
-        {(team.players || []).map((p, i) => (
-          <li key={i} className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm text-cream/80 truncate">{p.name}</span>
+      {/* Players */}
+      <ul className="divide-y divide-pitch-line border-t border-pitch-line">
+        {(team.players || []).map((p, i) => {
+          const barColor = (CATEGORY_STYLES[p.category] || CATEGORY_STYLES.Unlisted).bar;
+          return (
+            <li key={i} className="flex items-center gap-3 px-5 py-2.5">
+              <span className={"w-1 h-6 rounded-full flex-shrink-0 " + barColor} />
+              <span className="flex-1 text-sm text-cream/90">{p.name}</span>
               <CategoryBadge category={p.category} />
-            </div>
-            <span className="font-display text-lg text-gold tabular flex-shrink-0">{p.price} pts</span>
-          </li>
-        ))}
-        {(!team.players || team.players.length === 0) && (
-          <li className="text-sm text-cream/30">No players recorded.</li>
-        )}
+              <span className="font-display text-lg text-gold tabular w-16 text-right">{p.price} pts</span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -108,9 +119,9 @@ export default function Results({ teams }) {
       {!hasResults ? (
         <ComingSoon />
       ) : (
-        <div className="space-y-5">
-          {teams.map((team, i) => (
-            <TeamCard key={team.name} team={team} rank={i + 1} />
+        <div className="space-y-4">
+          {teams.map((team) => (
+            <TeamCard key={team.name} team={team} />
           ))}
         </div>
       )}

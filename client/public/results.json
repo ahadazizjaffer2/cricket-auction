@@ -1,3 +1,79 @@
 {
-  "teams": null
+  "teams": [
+    {
+      "name": "Team Strikers",
+      "captain": "Rahim",
+      "color": "Maroon",
+      "budgetTotal": 50,
+      "budgetSpent": 40,
+      "players": [
+        { "name": "Mirza",         "category": "Diamond",  "price": 10 },
+        { "name": "Kabir Nayani",  "category": "Diamond",  "price": 10 },
+        { "name": "Aaron",         "category": "Silver",   "price": 5  },
+        { "name": "Farzan Ashwani","category": "Platinum", "price": 9  },
+        { "name": "Adreesh",       "category": "Emerging",   "price": 4  },
+        { "name": "Nihan",         "category": "Silver",   "price": 2  }
+      ]
+    },
+    {
+      "name": "Team Warriors",
+      "captain": "Faizan",
+      "color": "Brown",
+      "budgetTotal": 50,
+      "budgetSpent": 50,
+      "players": [
+        { "name": "Areesh",         "category": "Gold",    "price": 7  },
+        { "name": "Hamid",          "category": "Gold",    "price": 8  },
+        { "name": "Karim Musani",   "category": "Silver",  "price": 2  },
+        { "name": "Rafay",          "category": "Platinum","price": 21 },
+        { "name": "Tabish",         "category": "Emerging",  "price": 7  },
+        { "name": "Illyan Dossani", "category": "Silver",  "price": 5  }
+      ]
+    },
+    {
+      "name": "Team Falcons",
+      "captain": "Zayaan",
+      "color": "Gray",
+      "budgetTotal": 50,
+      "budgetSpent": 50,
+      "players": [
+        { "name": "Nabeel",          "category": "Diamond",  "price": 3  },
+        { "name": "Shariq Naushad",  "category": "Diamond",  "price": 9  },
+        { "name": "Zulqarnain",      "category": "Gold",     "price": 2  },
+        { "name": "Rameez",          "category": "Platinum", "price": 10 },
+        { "name": "Shezad",          "category": "Platinum", "price": 18 },
+        { "name": "Farhad",          "category": "Emerging",   "price": 8  }
+      ]
+    },
+    {
+      "name": "Team Eagles",
+      "captain": "Aaniq Damani",
+      "color": "Royal Blue",
+      "budgetTotal": 50,
+      "budgetSpent": 50,
+      "players": [
+        { "name": "Amman Nayani",  "category": "Diamond",  "price": 8  },
+        { "name": "Faizan Aly",    "category": "Gold",     "price": 4  },
+        { "name": "Shayan",        "category": "Silver",   "price": 4  },
+        { "name": "Ali Saleem",    "category": "Platinum", "price": 7  },
+        { "name": "Sahil",         "category": "Platinum", "price": 13 },
+        { "name": "Sabih Nadani",  "category": "Emerging",   "price": 14 }
+      ]
+    },
+    {
+      "name": "Team Titans",
+      "captain": "Shariq Damani",
+      "color": "White",
+      "budgetTotal": 50,
+      "budgetSpent": 49,
+      "players": [
+        { "name": "Sameer Anwar",   "category": "Diamond",  "price": 21 },
+        { "name": "Rehman Ramzan",  "category": "Gold",     "price": 4  },
+        { "name": "Ali Nayani",     "category": "Gold",     "price": 5  },
+        { "name": "Aryan",          "category": "Emerging",   "price": 15 },
+        { "name": "Azman",          "category": "Emerging",   "price": 2  },
+        { "name": "Izaan",          "category": "Silver",   "price": 2  }
+      ]
+    }
+  ]
 }

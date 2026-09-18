@@ -153,7 +153,7 @@ export default function Rules() {
           className="flex items-center gap-1.5 rounded-lg border border-pitch-line px-4 py-2 text-sm text-cream/60 hover:text-cream hover:border-grass transition-colors"
         >
           <Download size={14} />
-          Rules PDF
+          Download Rules
         </a>
       </header>
 
