@@ -11,42 +11,24 @@ export default function Home() {
         height={180}
         priority
         quality={100}
-        className="mb-5 h-auto w-64 max-w-full"
+        className="mb-6 h-auto w-64 max-w-full"
       />
-      <a
-        href="https://foggpk.com"
-        target="_blank"
-        rel="noreferrer"
-        className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wide text-cream/40 hover:text-cream transition-colors"
-      >
-        <span>Powered by</span>
-        <img
-          src="/Fogg%20Golden%20Logo.png"
-          alt="Sponsor logo"
-          className="h-8 w-auto max-w-32 object-contain"
-        />
-      </a>
-      
-      <h1 className="font-display text-6xl text-cream mt-4">Live Auction</h1>
 
-      <div className="mt-8 w-full space-y-3">
+      <h1 className="font-display text-5xl text-cream mb-2">Rovers Cricket</h1>
+      <p className="text-sm text-cream/40 mb-10 uppercase tracking-widest">Player Auction 2026</p>
+
+      <div className="w-full space-y-3">
         <Link
-          href="/guest"
-          className="block rounded-xl border border-pitch-line bg-pitch-surface px-5 py-4 font-display text-2xl hover:border-grass transition-colors"
+          href="/results"
+          className="block rounded-xl border border-gold/50 bg-gold/10 px-5 py-4 font-display text-2xl text-gold hover:bg-gold/20 transition-colors"
         >
-          Watch as a guest
+          🏆 Auction Results
         </Link>
         <Link
           href="/rules"
-          className="block rounded-xl border border-pitch-line px-5 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
+          className="block rounded-xl border border-pitch-line bg-pitch-surface px-5 py-3 text-sm text-cream/60 hover:text-cream transition-colors"
         >
           Rules &amp; Regulations
-        </Link>
-        <Link
-          href="/admin"
-          className="block rounded-xl border border-pitch-line px-5 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
-        >
-          Admin
         </Link>
       </div>
     </div>
