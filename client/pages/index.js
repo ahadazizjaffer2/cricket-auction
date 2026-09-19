@@ -19,6 +19,12 @@ export default function Home() {
 
       <div className="w-full space-y-3">
         <Link
+          href="/schedule"
+          className="block rounded-xl border border-grass/50 bg-grass/10 px-5 py-4 font-display text-2xl text-grass hover:bg-grass/20 transition-colors"
+        >
+          🟢 Live Scores
+        </Link>
+        <Link
           href="/results"
           className="block rounded-xl border border-gold/50 bg-gold/10 px-5 py-4 font-display text-2xl text-gold hover:bg-gold/20 transition-colors"
         >
