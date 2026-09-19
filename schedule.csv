@@ -1,0 +1,12 @@
+match,team1,team2,batting_first,score1,score2,overs1,overs2,winner,motm,status
+Match 1 · 6:00 AM,Team Falcons,Team Strikers,,,,,,,,upcoming
+Match 2 · 6:25 AM,Team Eagles,Team Titans,,,,,,,,upcoming
+Match 3 · 6:50 AM,Team Warriors,Team Falcons,,,,,,,,upcoming
+Match 4 · 7:15 AM,Team Strikers,Team Eagles,,,,,,,,upcoming
+Match 5 · 7:40 AM,Team Titans,Team Warriors,,,,,,,,upcoming
+Match 6 · 8:05 AM,Team Falcons,Team Eagles,,,,,,,,upcoming
+Match 7 · 8:30 AM,Team Strikers,Team Warriors,,,,,,,,upcoming
+Match 8 · 8:55 AM,Team Titans,Team Falcons,,,,,,,,upcoming
+Match 9 · 9:20 AM,Team Eagles,Team Strikers,,,,,,,,upcoming
+Match 10 · 9:45 AM,Team Warriors,Team Titans,,,,,,,,upcoming
+Final · 10:40 AM,1st Place,2nd Place,,,,,,,,upcoming

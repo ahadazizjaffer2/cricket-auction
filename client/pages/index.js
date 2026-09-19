@@ -14,21 +14,21 @@ export default function Home() {
         className="mb-6 h-auto w-64 max-w-full"
       />
 
-      <h1 className="font-display text-5xl text-cream mb-2">Rovers Cricket</h1>
-      <p className="text-sm text-cream/40 mb-10 uppercase tracking-widest">Player Auction 2026</p>
-
+      <h1 className="font-display text-5xl text-cream mb-2">Rovers Cricket 2026</h1>
+      <br />
+      
       <div className="w-full space-y-3">
         <Link
           href="/schedule"
           className="block rounded-xl border border-grass/50 bg-grass/10 px-5 py-4 font-display text-2xl text-grass hover:bg-grass/20 transition-colors"
         >
-          🟢 Live Scores
+          Schedule and Live Scores
         </Link>
         <Link
           href="/results"
           className="block rounded-xl border border-gold/50 bg-gold/10 px-5 py-4 font-display text-2xl text-gold hover:bg-gold/20 transition-colors"
         >
-          🏆 Auction Results
+          Teams and Squads
         </Link>
         <Link
           href="/rules"
